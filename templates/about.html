@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}关于系统 - 订单管理系统{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <!-- 页面标题 -->
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <h1 style="margin: 0;">
+                <i class="layui-icon layui-icon-about"></i> 关于系统
+            </h1>
+        </div>
+    </div>
+
+    <!-- 系统介绍 -->
+    <div class="layui-row layui-col-space15" style="margin-top: 20px;">
+        <!-- 左侧信息 -->
+        <div class="layui-col-md8">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <i class="layui-icon layui-icon-app"></i> 系统介绍
+                </div>
+                <div class="layui-card-body">
+                    <div style="line-height: 1.8; font-size: 14px;">
+                        <p><strong>📋 系统概述</strong></p>
+                        <p>这是一个专为个人和小型团队定制的订单管理系统，提供完整的订单管理解决方案。</p>
+                        
+                        <p><strong>🎯 核心功能</strong></p>
+                        <ul style="padding-left: 20px;">
+                            <li>✅ 完整的订单生命周期管理</li>
+                            <li>✅ 多角色权限控制系统</li>
+                            <li>✅ 响应式界面设计</li>
+                            <li>✅ 数据统计与分析</li>
+                            <li>✅ 安全的用户认证机制</li>
+                        </ul>
+
+                        <p><strong>🛠 技术栈</strong></p>
+                        <div class="layui-row">
+                            <div class="layui-col-md6">
+                                <ul style="padding-left: 20px;">
+                                    <li>• 后端: Python Flask</li>
+                                    <li>• 前端: LayUI + jQuery</li>
+                                    <li>• 数据库: MySQL/SQLite</li>
+                                    <li>• 认证: Flask-Login</li>
+                                </ul>
+                            </div>
+                            <div class="layui-col-md6">
+                                <ul style="padding-left: 20px;">
+                                    <li>• 架构: MVC 模式</li>
+                                    <li>• 安全: Session 管理</li>
+                                    <li>• 部署: 支持多环境</li>
+                                    <li>• API: RESTful 接口</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 功能特性 -->
+            <div class="layui-card" style="margin-top: 15px;">
+                <div class="layui-card-header">
+                    <i class="layui-icon layui-icon-feature"></i> 功能特性
+                </div>
+                <div class="layui-card-body">
+                    <div class="layui-row">
+                        <div class="layui-col-md6">
+                            <div style="text-align: center; padding: 15px;">
+                                <i class="layui-icon layui-icon-user" style="font-size: 40px; color: #1E9FFF;"></i>
+                                <h4>多角色管理</h4>
+                                <p style="color: #666; font-size: 12px;">支持管理员、经理、用户等不同角色权限</p>
+                            </div>
+                        </div>
+                        <div class="layui-col-md6">
+                            <div style="text-align: center; padding: 15px;">
+                                <i class="layui-icon layui-icon-chart" style="font-size: 40px; color: #FF5722;"></i>
+                                <h4>数据统计</h4>
+                                <p style="color: #666; font-size: 12px;">可视化数据报表和统计分析</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="layui-row">
+                        <div class="layui-col-md6">
+                            <div style="text-align: center; padding: 15px;">
+                                <i class="layui-icon layui-icon-form" style="font-size: 40px; color: #009688;"></i>
+                                <h4>订单管理</h4>
+                                <p style="color: #666; font-size: 12px;">完整的订单CRUD操作和状态跟踪</p>
+                            </div>
+                        </div>
+                        <div class="layui-col-md6">
+                            <div style="text-align: center; padding: 15px;">
+                                <i class="layui-icon layui-icon-set" style="font-size: 40px; color: #5FB878;"></i>
+                                <h4>系统配置</h4>
+                                <p style="color: #666; font-size: 12px;">灵活的系统参数和权限配置</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧信息 -->
+        <div class="layui-col-md4">
+            <!-- 版本信息 -->
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <i class="layui-icon layui-icon-log"></i> 版本信息
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-table">
+                        <tr>
+                            <td width="80"><strong>版本</strong></td>
+                            <td>v1.0.0</td>
+                        </tr>
+                        <tr>
+                            <td><strong>发布日期</strong></td>
+                            <td>2024年</td>
+                        </tr>
+                        <tr>
+                            <td><strong>框架</strong></td>
+                            <td>Flask + LayUI</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据库</strong></td>
+                            <td>MySQL</td>
+                        </tr>
+                        <tr>
+                            <td><strong>许可证</strong></td>
+                            <td>MIT</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 技术支持 -->
+            <div class="layui-card" style="margin-top: 15px;">
+                <div class="layui-card-header">
+                    <i class="layui-icon layui-icon-service"></i> 技术支持
+                </div>
+                <div class="layui-card-body">
+                    <div style="padding: 10px;">
+                        <p><i class="layui-icon layui-icon-email"></i> <strong>邮箱支持</strong></p>
+                        <p style="margin-left: 25px; color: #666;">support@example.com</p>
+                        
+                        <p style="margin-top: 15px;"><i class="layui-icon layui-icon-cellphone"></i> <strong>联系电话</strong></p>
+                        <p style="margin-left: 25px; color: #666;">400-123-4567</p>
+                        
+                        <p style="margin-top: 15px;"><i class="layui-icon layui-icon-time"></i> <strong>服务时间</strong></p>
+                        <p style="margin-left: 25px; color: #666;">周一至周五 9:00-18:00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="layui-card" style="margin-top: 15px;">
+                <div class="layui-card-header">
+                    <i class="layui-icon layui-icon-component"></i> 快速操作
+                </div>
+                <div class="layui-card-body">
+                    <button class="layui-btn layui-btn-fluid layui-btn-primary" onclick="checkUpdate()">
+                        <i class="layui-icon layui-icon-refresh"></i> 检查更新
+                    </button>
+                    <button class="layui-btn layui-btn-fluid" style="margin-top: 10px;" onclick="exportSystemInfo()">
+                        <i class="layui-icon layui-icon-export"></i> 导出系统信息
+                    </button>
+                    <button class="layui-btn layui-btn-fluid layui-btn-warm" style="margin-top: 10px;" onclick="showSystemLog()">
+                        <i class="layui-icon layui-icon-console"></i> 查看系统日志
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开发团队 -->
+    <div class="layui-card" style="margin-top: 20px;">
+        <div class="layui-card-header">
+            <i class="layui-icon layui-icon-group"></i> 开发团队
+        </div>
+        <div class="layui-card-body">
+            <div class="layui-row">
+                <div class="layui-col-md3" style="text-align: center;">
+                    <div style="padding: 20px;">
+                        <div style="width: 80px; height: 80px; background: #1E9FFF; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon layui-icon-user" style="font-size: 30px; color: white;"></i>
+                        </div>
+                        <h4>开发工程师</h4>
+                        <p style="color: #666; font-size: 12px;">后端开发 & 系统架构</p>
+                    </div>
+                </div>
+                <div class="layui-col-md3" style="text-align: center;">
+                    <div style="padding: 20px;">
+                        <div style="width: 80px; height: 80px; background: #FF5722; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon layui-icon-face-smile" style="font-size: 30px; color: white;"></i>
+                        </div>
+                        <h4>UI设计师</h4>
+                        <p style="color: #666; font-size: 12px;">界面设计 & 用户体验</p>
+                    </div>
+                </div>
+                <div class="layui-col-md3" style="text-align: center;">
+                    <div style="padding: 20px;">
+                        <div style="width: 80px; height: 80px; background: #009688; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon layui-icon-templeate-1" style="font-size: 30px; color: white;"></i>
+                        </div>
+                        <h4>测试工程师</h4>
+                        <p style="color: #666; font-size: 12px;">质量保证 & 功能测试</p>
+                    </div>
+                </div>
+                <div class="layui-col-md3" style="text-align: center;">
+                    <div style="padding: 20px;">
+                        <div style="width: 80px; height: 80px; background: #5FB878; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon layui-icon-service" style="font-size: 30px; color: white;"></i>
+                        </div>
+                        <h4>技术支持</h4>
+                        <p style="color: #666; font-size: 12px;">客户支持 & 问题解答</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 检查更新
+function checkUpdate() {
+    layui.use('layer', function(){
+        var layer = layui.layer;
+        layer.msg('正在检查更新...', {icon: 16, time: 1000});
+        setTimeout(function(){
+            layer.msg('当前已是最新版本 v1.0.0', {icon: 1, time: 2000});
+        }, 1000);
+    });
+}
+
+// 导出系统信息
+function exportSystemInfo() {
+    layui.use('layer', function(){
+        var layer = layui.layer;
+        layer.msg('系统信息导出功能开发中...', {icon: 0, time: 2000});
+    });
+}
+
+// 显示系统日志
+function showSystemLog() {
+    layui.use('layer', function(){
+        var layer = layui.layer;
+        layer.open({
+            type: 1,
+            title: '系统日志',
+            area: ['600px', '400px'],
+            content: '<div style="padding: 20px; font-family: monospace; font-size: 12px; line-height: 1.5;">' +
+                     '2024-01-15 10:30:00 [INFO] 系统启动成功<br>' +
+                     '2024-01-15 10:31:15 [INFO] 用户 admin 登录系统<br>' +
+                     '2024-01-15 10:35:22 [INFO] 订单数据加载完成<br>' +
+                     '2024-01-15 10:40:10 [INFO] 数据库连接正常<br>' +
+                     '</div>'
+        });
+    });
+}
+
+// 页面加载完成后的操作
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('关于页面加载完成');
+});
+</script>
+{% endblock %}

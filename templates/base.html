@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}订单管理系统{% endblock %}</title>
+    <link href="{{ url_for('static', filename='css/layui.css') }}" rel="stylesheet">
+    <style>
+        .layui-layout-admin .layui-header {
+            background: #23262E;
+        }
+        .layui-layout-admin .layui-logo {
+            color: #fff;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .main-content {
+            padding: 15px;
+            background: #f2f2f2;
+            min-height: calc(100vh - 60px);
+        }
+        .layui-card {
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.1);
+        }
+        .welcome-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body class="layui-layout-body">
+    <div class="layui-layout layui-layout-admin">
+        
+        <!-- 顶部导航栏 -->
+        <div class="layui-header">
+            <!-- 左侧Logo -->
+            <div class="layui-logo">
+                <i class="layui-icon layui-icon-app"></i> 订单管理系统
+            </div>
+            
+            <!-- 顶部横向导航 -->
+            <ul class="layui-nav layui-layout-left" lay-filter="top-nav">
+                <!-- 首页 -->
+                <li class="layui-nav-item {% if request.endpoint == 'dashboard' %}layui-this{% endif %}">
+                    <a href="{{ url_for('dashboard') }}">
+                        <i class="layui-icon layui-icon-home"></i> 首页
+                    </a>
+                </li>
+                
+                <!-- 操作菜单（下拉） -->
+                <li class="layui-nav-item">
+                    <a href="javascript:;">
+                        <i class="layui-icon layui-icon-component"></i> 操作
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="javascript:;" onclick="quickSearch()">
+                            <i class="layui-icon layui-icon-search"></i> 快速搜索
+                        </a></dd>
+                        <dd><a href="javascript:;" onclick="refreshPage()">
+                            <i class="layui-icon layui-icon-refresh"></i> 刷新页面
+                        </a></dd>
+                        <dd><a href="javascript:;" onclick="exportData()">
+                            <i class="layui-icon layui-icon-export"></i> 导出数据
+                        </a></dd>
+                        <dd><hr></dd>
+                        <dd><a href="javascript:;" onclick="showSettings()">
+                            <i class="layui-icon layui-icon-set"></i> 个人设置
+                        </a></dd>
+                    </dl>
+                </li>
+                
+                <!-- 关于 -->
+                <li class="layui-nav-item">
+                    <a href="{{ url_for('about') }}">
+                        <i class="layui-icon layui-icon-about"></i> 关于系统
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- 右侧用户信息 -->
+            <ul class="layui-nav layui-layout-right">
+                <!-- 通知提醒 -->
+                <li class="layui-nav-item">
+                    <a href="javascript:;" onclick="showNotifications()">
+                        <i class="layui-icon layui-icon-notice"></i>
+                        <span class="layui-badge-dot"></span>
+                    </a>
+                </li>
+                
+                <!-- 用户信息 -->
+                <li class="layui-nav-item" style="margin-right: 20px;">
+                    <a href="javascript:;">
+                        <i class="layui-icon layui-icon-user"></i>
+                        {{ current_user.username }} 
+                        <span class="layui-badge layui-bg-orange" style="margin-left: 0px;">
+                            {{ current_user.role }}
+                        </span>
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="javascript:;" onclick="showProfile()">
+                            <i class="layui-icon layui-icon-face-smile"></i> 个人资料
+                        </a></dd>
+                        <dd><a href="javascript:;" onclick="changePassword()">
+                            <i class="layui-icon layui-icon-password"></i> 修改密码
+                        </a></dd>
+                        <dd><hr></dd>
+                        <dd><a href="{{ url_for('logout') }}">
+                            <i class="layui-icon layui-icon-logout"></i> 退出登录
+                        </a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 左侧导航栏 - 固定菜单 -->
+        <div class="layui-side layui-bg-black">
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="side-nav">
+                    <!-- 订单管理菜单 -->
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-form"></i> 订单管理
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="{{ url_for('dashboard') }}">
+                                <i class="layui-icon layui-icon-chart"></i> 订单统计
+                            </a></dd>
+                            <dd><a href="{{ url_for('orders.list_all') }}">
+                                <i class="layui-icon layui-icon-list"></i> 全部订单
+                            </a></dd>
+                            <dd><a href="{{ url_for('orders.list_pending') }}">
+                                <i class="layui-icon layui-icon-time"></i> 待使用订单
+                            </a></dd>
+                            <dd><a href="{{ url_for('orders.list_started') }}">
+                                <i class="layui-icon layui-icon-play"></i> 已开始订单
+                            </a></dd>
+                            <dd><a href="{{ url_for('orders.list_used') }}">
+                                <i class="layui-icon layui-icon-ok"></i> 已完结订单
+                            </a></dd>
+                            <dd><a href="{{ url_for('orders.list_cancel') }}">
+                                <i class="layui-icon layui-icon-clear"></i> 已取消订单
+                            </a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-form"></i> 服务管理
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="{{ url_for('exeitem_bp.exeitem_all') }}">
+                                <i class="layui-icon layui-icon-chart"></i> 已执行服务
+                            </a></dd>
+                            <dd><a href="{{ url_for('exeitem_bp.order_progress') }}">
+                                <i class="layui-icon layui-icon-chart"></i> 订单服务进度
+                            </a></dd>
+                            <dd><a href="{{ url_for('exeitem_bp.to_use_services') }}">
+                                <i class="layui-icon layui-icon-time"></i> 待使用服务
+                            </a></dd>
+                        </dl>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="layui-body">
+            <div class="main-content">
+                <!-- 页面特定内容 -->
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- 底部区域 -->
+        <div class="layui-footer" style="text-align: center; padding: 10px; font-size: 12px;">
+            <i class="layui-icon layui-icon-log"></i> 
+            订单管理系统 v1.0 &copy; 2024 技术支持团队
+        </div>
+    </div>
+
+    <script src="/static/js/layui.js"></script>
+    <script>
+        // 初始化LayUI模块
+        layui.use(['element', 'layer'], function(){
+            var element = layui.element;
+            var layer = layui.layer;
+            
+            // 监听左侧菜单点击
+            element.on('nav(side-nav)', function(elem){
+                console.log('菜单点击:', elem.text());
+            });
+        });
+
+        // 顶部导航功能函数
+        function quickSearch() {
+            layer.prompt({
+                title: '快速搜索',
+                placeholder: '请输入订单号、客户名称等关键词'
+            }, function(value, index, elem){
+                layer.msg('搜索关键词: ' + value);
+                layer.close(index);
+            });
+        }
+
+        function refreshPage() {
+            location.reload();
+        }
+
+        function exportData() {
+            layer.msg('数据导出功能开发中...', {icon: 1});
+        }
+
+        function showSettings() {
+            layer.msg('个人设置功能开发中...', {icon: 1});
+        }
+
+        function showAbout() {
+            layer.alert(`
+                <div style="text-align: center; padding: 20px;">
+                    <h3>订单管理系统 v1.0</h3>
+                    <p>一个简单高效的订单管理解决方案</p>
+                    <hr>
+                    <p>技术支持: tech@company.com</p>
+                    <p>© 2024 版权所有</p>
+                </div>
+            `, {
+                title: '关于系统',
+                area: ['400px', '300px'],
+                skin: 'layui-layer-molv'
+            });
+        }
+
+        function showNotifications() {
+            layer.msg('暂无新通知', {icon: 6});
+        }
+
+        function showProfile() {
+            layer.msg('个人资料功能开发中...', {icon: 1});
+        }
+
+        function changePassword() {
+            layer.msg('修改密码功能开发中...', {icon: 1});
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

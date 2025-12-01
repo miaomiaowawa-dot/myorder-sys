@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加订单</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/css/layui.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md8 layui-col-md-offset2">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>添加新订单</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" id="addOrderForm">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">订单信息</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="order_info" required lay-verify="required" placeholder="请输入订单信息" class="layui-input">
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">订单价格</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="order_price" step="0.01" required lay-verify="required|number" placeholder="请输入订单价格" class="layui-input">
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">折扣价格</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="order_disprice" step="0.01" required lay-verify="required|number" placeholder="请输入折扣价格" class="layui-input">
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">订单状态</label>
+                                <div class="layui-input-block">
+                                    <select name="order_status" lay-verify="required">
+                                        <option value="pending">待使用</option>
+                                        <option value="started">进行中</option>
+                                        <option value="used">已完成</option>
+                                        <option value="cancel">已取消</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">订单备注</label>
+                                <div class="layui-input-block">
+                                    <textarea name="order_remark" placeholder="请输入订单备注" class="layui-textarea"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- 服务项目选择 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">服务项目</label>
+                                <div class="layui-input-block">
+                                    <div id="services-container">
+                                        <div class="layui-row service-item">
+                                            <div class="layui-col-md6">
+                                                <select name="service_ids[]" lay-verify="required" class="service-select">
+                                                    <option value="">请选择服务项目</option>
+                                                    <!-- 服务选项将通过JavaScript动态加载 -->
+                                                </select>
+                                            </div>
+                                            <div class="layui-col-md4">
+                                                <input type="number" name="quantities[]" value="1" min="1" class="layui-input quantity-input" placeholder="数量">
+                                            </div>
+                                            <div class="layui-col-md2">
+                                                <button type="button" class="layui-btn layui-btn-danger layui-btn-sm remove-service">删除</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="layui-btn layui-btn-normal layui-btn-sm" id="add-service" style="margin-top: 10px;">
+                                        <i class="layui-icon">&#xe654;</i> 添加服务
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn" lay-submit lay-filter="addOrder">提交</button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                    <a href="{{ url_for('orders.list_all') }}" class="layui-btn layui-btn-primary">返回</a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/layui.min.js"></script>
+    <script>
+        layui.use(['form', 'jquery'], function(){
+            var form = layui.form;
+            var $ = layui.$;
+            
+            // 加载服务选项
+            loadServices();
+            
+            // 添加服务行
+            $('#add-service').click(function(){
+                var newRow = `
+                    <div class="layui-row service-item" style="margin-top: 10px;">
+                        <div class="layui-col-md6">
+                            <select name="service_ids[]" lay-verify="required" class="service-select">
+                                <option value="">请选择服务项目</option>
+                            </select>
+                        </div>
+                        <div class="layui-col-md4">
+                            <input type="number" name="quantities[]" value="1" min="1" class="layui-input quantity-input" placeholder="数量">
+                        </div>
+                        <div class="layui-col-md2">
+                            <button type="button" class="layui-btn layui-btn-danger layui-btn-sm remove-service">删除</button>
+                        </div>
+                    </div>
+                `;
+                $('#services-container').append(newRow);
+                loadServices(); // 重新加载选项
+                form.render('select');
+            });
+            
+            // 删除服务行
+            $(document).on('click', '.remove-service', function(){
+                if($('.service-item').length > 1) {
+                    $(this).closest('.service-item').remove();
+                } else {
+                    layer.msg('至少保留一个服务项目', {icon: 2});
+                }
+            });
+            
+            // 加载服务选项
+            function loadServices() {
+                $('.service-select').each(function(){
+                    if($(this).find('option').length <= 1) {
+                        fetch('/orders/api/services')
+                            .then(response => response.json())
+                            .then(data => {
+                                if(data.code === 0) {
+                                    var select = $(this);
+                                    select.empty();
+                                    select.append('<option value="">请选择服务项目</option>');
+                                    data.data.forEach(function(service){
+                                        select.append(`<option value="${service.service_id}">${service.desc} - ${service.package || ''}</option>`);
+                                    });
+                                    form.render('select');
+                                }
+                            });
+                    }
+                });
+            }
+            
+            // 表单提交
+            form.on('submit(addOrder)', function(data){
+                var formData = data.field;
+                
+                // 处理服务数据
+                var services = [];
+                $('.service-item').each(function(index){
+                    var serviceId = $(this).find('.service-select').val();
+                    var quantity = $(this).find('.quantity-input').val();
+                    if(serviceId) {
+                        services.push({
+                            service_id: parseInt(serviceId),
+                            quantity: parseInt(quantity)
+                        });
+                    }
+                });
+                
+                if(services.length === 0) {
+                    layer.msg('请至少选择一个服务项目', {icon: 2});
+                    return false;
+                }
+                
+                formData.services = services;
+                
+                fetch('/orders/api/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if(result.code === 0) {
+                        layer.msg('订单添加成功', {icon: 1}, function(){
+                            window.location.href = "{{ url_for('orders.list_all') }}";
+                        });
+                    } else {
+                        layer.msg('添加失败: ' + result.msg, {icon: 2});
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    layer.msg('网络错误，请稍后重试', {icon: 2});
+                });
+                
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加服务记录</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/css/layui.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md8 layui-col-md-offset2">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>添加服务记录</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" id="addExeitemForm">
+                            <!-- 关联订单 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">关联订单</label>
+                                <div class="layui-input-block">
+                                    <select name="record_id" lay-verify="required" lay-filter="orderSelect">
+                                        <option value="">请选择订单</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 服务项目 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">服务项目</label>
+                                <div class="layui-input-block">
+                                    <select name="service_id" lay-verify="required" lay-filter="serviceSelect">
+                                        <option value="">请先选择订单</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 项目名称（自动填充） -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">项目名称</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="item_name" readonly class="layui-input" placeholder="选择服务后自动填充" style="background-color: #f8f8f8; color: #666;">
+                                </div>
+                            </div>
+                            
+                            <!-- 项目价格 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">项目价格</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="item_price" step="0.01" required lay-verify="required|number" placeholder="请输入项目价格" class="layui-input">
+                                </div>
+                            </div>
+                            
+                            <!-- 执行时间 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">执行时间</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="exetime" id="exetime" required lay-verify="required" placeholder="请选择执行时间" class="layui-input">
+                                </div>
+                            </div>
+                            
+                            <!-- 项目备注 -->
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">项目备注</label>
+                                <div class="layui-input-block">
+                                    <textarea name="item_remark" placeholder="请输入项目备注" class="layui-textarea"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn" lay-submit lay-filter="addExeitem">提交</button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                    <a href="{{ url_for('exeitem_bp.exeitem_all') }}" class="layui-btn layui-btn-primary">返回</a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/layui.min.js"></script>
+    <script>
+        layui.use(['form', 'laydate'], function(){
+            var form = layui.form;
+            var laydate = layui.laydate;
+            var $ = layui.$;
+            
+            // 初始化日期选择器
+            laydate.render({
+                elem: '#exetime',
+                type: 'datetime',
+                value: new Date()
+            });
+            
+            // 加载订单列表
+            loadOrders();
+            
+            // 监听订单选择变化
+            form.on('select(orderSelect)', function(data){
+                var orderId = data.value;
+                if(orderId) {
+                    loadOrderServices(orderId);
+                } else {
+                    $('select[name="service_id"]').html('<option value="">请先选择订单</option>');
+                    $('input[name="item_name"]').val('');
+                    form.render();
+                }
+            });
+            
+            // 监听服务选择变化 - 自动填充项目名称
+            form.on('select(serviceSelect)', function(data){
+                var selectedText = $(data.elem).find('option:selected').text();
+                if(selectedText && selectedText !== '请先选择订单' && selectedText !== '请选择服务项目') {
+                    $('input[name="item_name"]').val(selectedText);
+                } else {
+                    $('input[name="item_name"]').val('');
+                }
+            });
+            
+            // 加载订单列表
+            function loadOrders() {
+                $.ajax({
+                    url: '/item/api/orders',
+                    type: 'GET',
+                    success: function(res) {
+                        if(res.code === 0) {
+                            var orderSelect = $('select[name="record_id"]');
+                            orderSelect.empty().append('<option value="">请选择订单</option>');
+                            
+                            res.data.forEach(function(order) {
+                                var statusText = order.order_status === 'pending' ? '[待使用]' : '[进行中]';
+                                orderSelect.append('<option value="' + order.order_id + '">' + 
+                                    statusText + ' ' + order.order_info + ' (ID:' + order.order_id + ')</option>');
+                            });
+                            
+                            form.render('select');
+                        } else {
+                            layer.msg('加载订单失败: ' + res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('网络错误，加载订单失败', {icon: 2});
+                    }
+                });
+            }
+            
+            // 加载订单对应的服务项目
+            function loadOrderServices(orderId) {
+                $.ajax({
+                    url: '/item/api/order_services/' + orderId,
+                    type: 'GET',
+                    success: function(res) {
+                        if(res.code === 0) {
+                            var serviceSelect = $('select[name="service_id"]');
+                            serviceSelect.empty().append('<option value="">请选择服务项目</option>');
+                            
+                            res.data.forEach(function(service) {
+                                serviceSelect.append('<option value="' + service.service_id + '">' + 
+                                    service.service_desc + '</option>');
+                            });
+                            
+                            form.render('select');
+                            
+                            if(res.data.length === 0) {
+                                layer.msg('该订单暂无服务项目', {icon: 3});
+                            }
+                        } else {
+                            layer.msg('加载服务失败: ' + res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('网络错误，加载服务失败', {icon: 2});
+                    }
+                });
+            }
+            
+            // 表单提交
+            form.on('submit(addExeitem)', function(data){
+                var formData = data.field;
+                
+                // 简单验证
+                if(!formData.record_id) {
+                    layer.msg('请选择关联订单', {icon: 2});
+                    return false;
+                }
+                if(!formData.service_id) {
+                    layer.msg('请选择服务项目', {icon: 2});
+                    return false;
+                }
+                
+                $.ajax({
+                    url: '/item/api/add',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(res) {
+                        if(res.code === 0) {
+                            layer.msg('添加成功', {icon: 1}, function(){
+                                window.location.href = "{{ url_for('exeitem_bp.exeitem_all') }}";
+                            });
+                        } else {
+                            layer.msg('添加失败: ' + res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('网络错误，请重试', {icon: 2});
+                    }
+                });
+                
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>

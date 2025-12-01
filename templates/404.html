@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>页面未找到 - 订单管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.6.8/css/layui.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .error-container {
+            text-align: center;
+            background: white;
+            padding: 50px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        .error-icon {
+            font-size: 80px;
+            color: #ff5722;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .action-buttons {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="layui-icon layui-icon-face-cry"></i>
+        </div>
+        <h1 class="error-title">404 - 页面未找到</h1>
+        <div class="error-message">
+            <p>抱歉，您访问的页面不存在或已被移动。</p>
+            <p>请检查URL是否正确，或返回首页继续浏览。</p>
+        </div>
+        <div class="action-buttons">
+            <button class="layui-btn layui-btn-primary" onclick="history.back()">
+                <i class="layui-icon layui-icon-left"></i> 返回上页
+            </button>
+            <button class="layui-btn layui-btn-normal" onclick="goHome()">
+                <i class="layui-icon layui-icon-home"></i> 返回首页
+            </button>
+        </div>
+        <div style="margin-top: 20px; color: #999; font-size: 12px;">
+            如需帮助，请联系技术支持
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.6.8/layui.js"></script>
+    <script>
+        function goHome() {
+            window.location.href = '/';
+        }
+        
+        // 自动跳转倒计时
+        let countdown = 10;
+        const timerElement = document.createElement('div');
+        timerElement.style.marginTop = '15px';
+        timerElement.style.color = '#999';
+        timerElement.style.fontSize = '14px';
+        document.querySelector('.action-buttons').after(timerElement);
+        
+        const timer = setInterval(() => {
+            countdown--;
+            timerElement.innerHTML = `${countdown}秒后自动跳转到首页`;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                goHome();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

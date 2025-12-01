@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待使用服务</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/css/layui.min.css" rel="stylesheet">
+    <style>
+        .order-card {
+            border-left: 4px solid #1E9FFF;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pending-order {
+            border-left-color: #FFB800;
+        }
+        .started-order {
+            border-left-color: #1E9FFF;
+        }
+        .service-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fafafa;
+        }
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        .status-used {
+            background: linear-gradient(90deg, #f8f8f8, #e8f5e8);
+        }
+        .status-started {
+            background: linear-gradient(90deg, #f8f8f8, #e8f0ff);
+        }
+        .status-pending {
+            background: linear-gradient(90deg, #f8f8f8, #fff8e8);
+        }
+        .progress-container {
+            margin: 10px 0;
+        }
+        .used-records {
+            border-left: 2px solid #5FB878;
+            padding-left: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 8px;
+        }
+        .used-record-item {
+            padding: 2px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .used-record-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>待使用服务</h2>
+                        <a href="{{ url_for('exeitem_bp.add_exeitem_page') }}" class="layui-btn layui-btn-normal" style="float: right;">
+                            <i class="layui-icon">&#xe654;</i> 添加服务记录
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="orders-container">
+                            <div class="layui-col-md12 layui-text" style="text-align: center; padding: 50px;">
+                                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px;"></i>
+                                <div style="margin-top: 15px;">加载中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.9.6/dist/layui.min.js"></script>
+    <script>
+        layui.use(['element'], function(){
+            var element = layui.element;
+            
+            // 加载待使用服务数据
+            loadToUseServices();
+            
+            // 每30秒自动刷新
+            setInterval(loadToUseServices, 30000);
+        });
+
+        // 加载待使用服务数据
+        function loadToUseServices() {
+            fetch('/item/api/to_use_services')
+                .then(response => response.json())
+                .then(data => {
+                    if(data.code === 0) {
+                        displayOrders(data.data);
+                    } else {
+                        showError('加载失败: ' + data.msg);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('网络错误，请稍后重试');
+                });
+        }
+
+        // 显示订单和服务
+        function displayOrders(orders) {
+            const container = document.getElementById('orders-container');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="layui-col-md12">
+                        <div class="layui-card">
+                            <div class="layui-card-body">
+                                <div class="layui-alert layui-alert-info">
+                                    <h3>暂无待使用服务</h3>
+                                    <p>所有服务均已使用完成。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            orders.forEach(order => {
+                const orderClass = order.order_status === 'pending' ? 'pending-order' : 'started-order';
+                const orderStatusText = order.order_status === 'pending' ? '待使用' : '进行中';
+                const orderStatusColor = order.order_status === 'pending' ? 'orange' : 'blue';
+                
+                html += `
+                    <div class="layui-col-md12">
+                        <div class="layui-card order-card ${orderClass}">
+                            <div class="layui-card-header">
+                                <div class="layui-row">
+                                    <div class="layui-col-md8">
+                                        <h3>${order.order_info}</h3>
+                                        <span class="layui-badge layui-bg-gray">订单号: ${order.order_id}</span>
+                                        <span class="layui-badge layui-bg-${orderStatusColor}">${orderStatusText}</span>
+                                    </div>
+                                    <div class="layui-col-md4" style="text-align: right;">
+                                        <span class="layui-badge layui-bg-gray">购买时间: ${formatDate(order.order_buytime)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-card-body">
+                                ${displayOrderServices(order.services, order.order_id)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // 重新渲染进度条
+            layui.use('element', function(){
+                var element = layui.element;
+                element.render('progress');
+            });
+        }
+
+        // 显示订单的服务项目
+        function displayOrderServices(services, orderId) {
+            let html = '<h4>服务项目:</h4>';
+            
+            services.forEach(service => {
+                const statusClass = `status-${service.display_status}`;
+                const statusConfig = getStatusConfig(service.display_status);
+                
+                html += `
+                    <div class="service-item ${statusClass}">
+                        <div class="layui-row">
+                            <div class="layui-col-md8">
+                                <strong>${service.service_desc}</strong>
+                                <div style="margin-top: 5px;">
+                                    <small class="text-muted">
+                                        ${service.package ? `套餐: ${service.package} | ` : ''}
+                                        ${service.type ? `类型: ${service.type} | ` : ''}
+                                        ${service.part ? `部位: ${service.part}` : ''}
+                                    </small>
+                                </div>
+                                ${service.quantity > 1 ? `
+                                <div class="progress-container">
+                                    <div class="layui-progress layui-progress-big">
+                                        <div class="layui-progress-bar" lay-percent="${service.progress}%"></div>
+                                    </div>
+                                    <small>已完成: ${service.completed_quantity}/${service.quantity}</small>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- 显示所有item记录 -->
+                                ${service.item_records && service.item_records.length > 0 ? `
+                                <div class="used-records">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                                        <i class="layui-icon layui-icon-time"></i> 使用记录 (${service.item_records.length}次):
+                                    </div>
+                                    ${service.item_records.map(item => `
+                                        <div class="used-record-item">
+                                            ${formatDateTime(item.exetime)} - ${item.item_name || service.service_desc}
+                                            ${item.item_price ? ` - ¥${parseFloat(item.item_price).toFixed(2)}` : ''}
+                                            ${item.item_remark ? ` (${item.item_remark})` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="layui-col-md4" style="text-align: right;">
+                                <span class="layui-badge ${statusConfig.badgeClass}">${statusConfig.text}</span>
+                                <div style="margin-top: 10px;">
+                                    ${service.display_status !== 'used' || service.remaining_quantity > 0 ? `
+                                    <button class="layui-btn layui-btn-sm layui-btn-normal" 
+                                            onclick="useService(${service.service_id}, '${service.service_desc}', ${orderId})">
+                                        ${service.used_count > 0 ? '再次使用' : '使用服务'}
+                                    </button>
+                                    ` : ''}
+                                </div>
+                                ${service.used_count > 0 ? `
+                                <div style="margin-top: 5px;">
+                                    <small>已使用: ${service.used_count}次</small>
+                                </div>
+                                ` : ''}
+                                ${service.remaining_quantity > 0 ? `
+                                <div style="margin-top: 5px;">
+                                    <small>剩余: ${service.remaining_quantity}次</small>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+
+        // 获取状态配置
+        function getStatusConfig(status) {
+            const configs = {
+                'used': { text: '已使用', badgeClass: 'layui-bg-green' },
+                'started': { text: '进行中', badgeClass: 'layui-bg-blue' },
+                'pending': { text: '待使用', badgeClass: 'layui-bg-orange' }
+            };
+            return configs[status] || { text: '未知', badgeClass: 'layui-bg-gray' };
+        }
+
+        // 格式化日期（只显示日期部分）
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return '-';
+                }
+                return date.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+            } catch (error) {
+                console.error('日期格式化错误:', error);
+                return '-';
+            }
+        }
+
+        // 格式化日期时间（显示完整时间）
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return '-';
+                }
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                });
+            } catch (error) {
+                console.error('日期时间格式化错误:', error);
+                return '-';
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = `
+                <div class="layui-col-md12">
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <div class="layui-alert layui-alert-danger">
+                                <h3>加载失败</h3>
+                                <p>${message}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 使用服务
+        function useService(serviceId, serviceDesc, orderId) {
+            layer.confirm(`确定要使用服务 "${serviceDesc}" 吗？`, function(index){
+                // 跳转到添加服务记录页面，并预填信息
+                const url = "{{ url_for('exeitem_bp.add_exeitem_page') }}";
+                window.location.href = url;
+                
+                layer.close(index);
+            });
+        }
+    </script>
+</body>
+</html>

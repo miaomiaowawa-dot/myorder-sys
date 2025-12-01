@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>服务器错误 - 订单管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.6.8/css/layui.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .error-container {
+            text-align: center;
+            background: white;
+            padding: 50px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+        .error-icon {
+            font-size: 80px;
+            color: #ff5722;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .error-details {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .action-buttons {
+            margin-top: 30px;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 5px;
+            border-left: 4px solid #1E9FFF;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="layui-icon layui-icon-tips"></i>
+        </div>
+        <h1 class="error-title">500 - 服务器内部错误</h1>
+        <div class="error-message">
+            <p>抱歉，服务器遇到了一些问题，无法完成您的请求。</p>
+            <p>我们的技术团队已经收到通知，正在紧急修复中。</p>
+        </div>
+        
+        {% if config.DEBUG %}
+        <div class="error-details">
+            <strong>错误信息（开发模式）：</strong><br>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <div class="contact-info">
+            <strong>📞 技术支持</strong><br>
+            电话: 400-123-4567<br>
+            邮箱: support@company.com<br>
+            工作时间: 周一至周五 9:00-18:00
+        </div>
+        
+        <div class="action-buttons">
+            <button class="layui-btn layui-btn-primary" onclick="history.back()">
+                <i class="layui-icon layui-icon-left"></i> 返回上页
+            </button>
+            <button class="layui-btn" onclick="location.reload()">
+                <i class="layui-icon layui-icon-refresh"></i> 重新加载
+            </button>
+            <button class="layui-btn layui-btn-normal" onclick="goHome()">
+                <i class="layui-icon layui-icon-home"></i> 返回首页
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.6.8/layui.js"></script>
+    <script>
+        function goHome() {
+            window.location.href = '/';
+        }
+        
+        // 自动尝试重新加载
+        let retryCount = 5;
+        const retryElement = document.createElement('div');
+        retryElement.style.marginTop = '15px';
+        retryElement.style.color = '#999';
+        retryElement.style.fontSize = '14px';
+        document.querySelector('.action-buttons').after(retryElement);
+        
+        const retryTimer = setInterval(() => {
+            retryCount--;
+            retryElement.innerHTML = `${retryCount}秒后自动尝试重新加载`;
+            
+            if (retryCount <= 0) {
+                clearInterval(retryTimer);
+                location.reload();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}控制台 - 订单管理系统{% endblock %}
+
+{% block content %}
+<!-- 欢迎头 -->
+<div class="welcome-header">
+    <h1>欢迎回来，{{ current_user.username }}！</h1>
+    <p>今天是 {{ now.strftime('%Y年%m月%d日') }}，祝您工作愉快！</p>
+    <p>欢迎使用订单管理系统！</p>
+</div>
+
+<!-- 统计卡片 -->
+<div class="layui-row layui-col-space15">
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="layui-icon layui-icon-chart-screen" style="color: #1E9FFF;"></i> 总订单数
+            </div>
+            <div class="layui-card-body" id="total-orders" style="font-size: 28px; color: #1E9FFF; text-align: center; font-weight: bold;">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate"></i>
+            </div>
+            <div class="layui-card-footer" style="text-align: center; color: #666;">
+                所有订单
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="layui-icon layui-icon-rmb" style="color: #FF5722;"></i> 总金额
+            </div>
+            <div class="layui-card-body" id="total-amount" style="font-size: 24px; color: #FF5722; text-align: center; font-weight: bold;">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate"></i>
+            </div>
+            <div class="layui-card-footer" style="text-align: center; color: #666;">
+                所有订单的折扣金额
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md3">
+    <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="layui-icon layui-icon-time" style="color: #FFB800;"></i> 待使用订单
+            </div>
+            <div class="layui-card-body" id="pending-orders" style="font-size: 28px; color: #FFB800; text-align: center; font-weight: bold;">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate"></i>
+            </div>
+            <div class="layui-card-footer" style="text-align: center; color: #666;">
+                待使用状态
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="layui-icon layui-icon-rmb" style="color: #5FB878;"></i> 已消费金额
+            </div>
+            <div class="layui-card-body" id="consumed-amount" style="font-size: 24px; color: #5FB878; text-align: center; font-weight: bold;">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate"></i>
+            </div>
+            <div class="layui-card-footer" style="text-align: center; color: #666;">
+                已使用订单 + 进行中已消费
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表和快速操作 -->
+<div class="layui-row layui-col-space15" style="margin-top: 20px;">
+    <div class="layui-col-md8">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="layui-icon layui-icon-chart"></i> 服务趋势
+                <div class="layui-btn-group" style="float: right;">
+                    <button class="layui-btn layui-btn-xs layui-btn-primary" id="year-btn">年度</button>
+                </div>
+            </div>
+            <div class="layui-card-body">
+                <div id="service-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="layui-col-md4">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <i class="layui-icon layui-icon-tabs"></i> 快速操作
+        </div>
+        <div class="layui-card-body">
+            <div class="layui-row layui-col-space10">
+                <!-- 第一行：导出数据按钮 -->
+                <div class="layui-col-md12" style="margin-bottom: 15px;">
+                    <button class="layui-btn layui-btn-fluid layui-btn-warm" 
+                            onclick="exportData()"
+                            style="height: 80px; line-height: 30px; padding: 15px 0;">
+                        <i class="layui-icon layui-icon-export" style="font-size: 24px;"></i><br>
+                        <span style="color: white; font-size: 16px; font-weight: bold;">导出数据</span>
+                    </button>
+                </div>
+            </div>
+            <div class="layui-row layui-col-space10">
+                <!-- 第二行：两个按钮并排 -->
+                <div class="layui-col-md6" style="text-align: center;">
+                    <button class="layui-btn layui-btn-fluid layui-btn-danger" 
+                            onclick="location.href='{{ url_for('orders.list_pending') }}'"
+                            style="height: 70px; line-height: 25px; padding: 10px 0;">
+                        <i class="layui-icon layui-icon-time" style="font-size: 20px;"></i><br>
+                        <span style="color: white; font-size: 14px;">待处理订单</span>
+                    </button>
+                </div>
+                <div class="layui-col-md6" style="text-align: center;">
+                    <button class="layui-btn layui-btn-fluid layui-btn-normal" 
+                            onclick="quickSearch()"
+                            style="height: 70px; line-height: 25px; padding: 10px 0;">
+                        <i class="layui-icon layui-icon-search" style="font-size: 20px;"></i><br>
+                        <span style="color: white; font-size: 14px;">快速搜索</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近订单 -->
+<div class="layui-card" style="margin-top: 20px;">
+    <div class="layui-card-header">
+        <i class="layui-icon layui-icon-list"></i> 最近订单
+        <a href="{{ url_for('orders.list_all') }}" class="layui-btn layui-btn-xs" style="float: right;">
+            查看全部 <i class="layui-icon layui-icon-right"></i>
+        </a>
+    </div>
+    <div class="layui-card-body">
+        <table class="layui-table">
+            <thead>
+                <tr>
+                    <th>订单号</th>
+                    <th>订单信息</th>
+                    <th>金额</th>
+                    <th>折扣金额</th>
+                    <th>状态</th>
+                    <th>购买时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="recent-orders-body">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #999;">
+                        <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate"></i> 加载中...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+<script>
+
+// 页面加载时获取统计数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    loadServiceChart();
+});
+
+// 加载仪表盘统计数据
+function loadDashboardStats() {
+    fetch('/orders/api/dashboard-stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0) {
+                updateDashboardCards(data.data);
+                updateRecentOrders(data.data.recent_orders);
+            } else {
+                layer.msg('加载统计数据失败: ' + data.msg, {icon: 2});
+                setErrorState();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            layer.msg('网络错误，请稍后重试', {icon: 2});
+            setErrorState();
+        });
+}
+
+// 加载服务趋势图表
+function loadServiceChart() {
+    fetch('/orders/api/service-trend')
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0) {
+                updateServiceChart(data.data);
+            } else {
+                console.error('加载服务趋势失败:', data.msg);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+// 更新统计卡片
+function updateDashboardCards(stats) {
+    // 总订单数
+    const totalOrdersElement = document.getElementById('total-orders');
+    if (totalOrdersElement) {
+        totalOrdersElement.textContent = formatNumber(stats.total_orders);
+    }
+    
+    // 总金额
+    const totalAmountElement = document.getElementById('total-amount');
+    if (totalAmountElement) {
+        totalAmountElement.innerHTML = `¥ ${formatNumber(stats.total_amount.toFixed(2))}`;
+    }
+    
+   // 待使用订单数量
+    const pendingOrdersElement = document.getElementById('pending-orders');
+    if (pendingOrdersElement) {
+        pendingOrdersElement.textContent = formatNumber(stats.pending_orders);
+    }
+    
+    // 已消费金额
+    const consumedAmountElement = document.getElementById('consumed-amount');
+    if (consumedAmountElement) {
+        consumedAmountElement.innerHTML = `¥ ${formatNumber(stats.consumed_amount.toFixed(2))}`;
+    }
+}
+
+// 更新服务趋势图表
+function updateServiceChart(chartData) {
+    const chart = echarts.init(document.getElementById('service-chart'));
+    
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            formatter: function(params) {
+                return `${params[0].name}<br/>服务数量: ${params[0].value}`;
+            }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: chartData.months,
+            axisLine: {
+                lineStyle: {
+                    color: '#999'
+                }
+            },
+            axisLabel: {
+                interval: 0,
+                rotate: 45
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: '服务数量',
+            axisLine: {
+                show: true,
+                lineStyle: {
+                    color: '#999'
+                }
+            },
+            minInterval: 1
+        },
+        series: [
+            {
+                name: '服务数量',
+                type: 'bar',
+                data: chartData.counts,
+                itemStyle: {
+                    color: '#1E9FFF'
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '{c}'
+                }
+            }
+        ]
+    };
+    
+    chart.setOption(option);
+    
+    // 窗口调整时重绘图表
+    window.addEventListener('resize', function(){
+        chart.resize();
+    });
+}
+
+// 更新最近订单表格
+function updateRecentOrders(orders) {
+    const tbody = document.getElementById('recent-orders-body');
+    
+    if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">暂无订单数据</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    orders.forEach(order => {
+        html += `
+            <tr>
+                <td><strong>${order.order_id}</strong></td>
+                <td>${order.order_info}</td>
+                <td>${order.order_price ? '¥' + order.order_price : '-'}</td>
+                <td>${order.order_disprice ? '¥' + order.order_disprice : '-'}</td>
+                <td>
+                    <span class="layui-badge layui-bg-${order.status_color}">
+                        ${order.status_text}
+                    </span>
+                </td>
+                <td>${order.order_buytime}</td>
+                <td>
+                    <button class="layui-btn layui-btn-xs" onclick="viewOrder('${order.order_id}')">查看</button>
+                    <button class="layui-btn layui-btn-xs layui-btn-normal" onclick="editOrder('${order.order_id}')">编辑</button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// 数字格式化（添加千位分隔符）
+function formatNumber(num) {
+    if (typeof num === 'number') {
+        return num.toLocaleString('zh-CN');
+    }
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// 设置错误状态
+function setErrorState() {
+    const elements = ['total-orders', 'total-amount', 'pending-orders', 'consumed-amount'];
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.innerHTML = '<span style="color: #FF5722;">加载失败</span>';
+        }
+    });
+    
+    const tbody = document.getElementById('recent-orders-body');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #FF5722;">加载失败</td></tr>';
+    }
+}
+
+// 查看订单
+function viewOrder(orderId) {
+    layer.msg('查看订单: ' + orderId, {icon: 1});
+}
+
+// 编辑订单
+function editOrder(orderId) {
+    layer.msg('编辑订单: ' + orderId, {icon: 1});
+}
+
+// 窗口调整时重绘图表
+window.addEventListener('resize', function(){
+    const chart = echarts.getInstanceByDom(document.getElementById('service-chart'));
+    if (chart) {
+        chart.resize();
+    }
+});
+</script>
+{% endblock %}

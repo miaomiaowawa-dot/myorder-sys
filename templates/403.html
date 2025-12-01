@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>权限不足 - 订单管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/layui@2.6.8/css/layui.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .error-container {
+            text-align: center;
+            background: white;
+            padding: 50px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        .error-icon {
+            font-size: 80px;
+            color: #ffb800;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .user-info {
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #ffb800;
+        }
+        .action-buttons {
+            margin-top: 30px;
+        }
+        .permission-list {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="layui-icon layui-icon-face-surprised"></i>
+        </div>
+        <h1 class="error-title">403 - 权限不足</h1>
+        <div class="error-message">
+            <p>抱歉，您没有权限访问此页面。</p>
+            <p>该功能需要更高的权限级别才能使用。</p>
+        </div>
+        
+        <div class="user-info">
+            <strong>当前用户信息</strong><br>
+            用户名: {{ current_user.username if current_user.is_authenticated else '未登录' }}<br>
+            角色: {{ current_user.role if current_user.is_authenticated else '未知' }}
+        </div>
+        
+        <div class="permission-list">
+            <strong>💡 您可能需要以下权限：</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>管理员权限</li>
+                <li>经理权限</li>
+                <li>特定功能模块的访问权限</li>
+            </ul>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="layui-btn layui-btn-primary" onclick="history.back()">
+                <i class="layui-icon layui-icon-left"></i> 返回上页
+            </button>
+            {% if current_user.is_authenticated %}
+            <button class="layui-btn layui-btn-normal" onclick="goDashboard()">
+                <i class="layui-icon layui-icon-home"></i> 返回首页
+            </button>
+            {% else %}
+            <button class="layui-btn layui-btn-warm" onclick="goLogin()">
+                <i class="layui-icon layui-icon-user"></i> 重新登录
+            </button>
+            {% endif %}
+            <button class="layui-btn" onclick="requestPermission()">
+                <i class="layui-icon layui-icon-service"></i> 申请权限
+            </button>
+        </div>
+        
+        <div style="margin-top: 20px; color: #999; font-size: 12px;">
+            如需提升权限，请联系系统管理员
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.6.8/layui.js"></script>
+    <script>
+        function goDashboard() {
+            window.location.href = '/dashboard';
+        }
+        
+        function goLogin() {
+            window.location.href = '/login';
+        }
+        
+        function requestPermission() {
+            layui.use('layer', function(){
+                var layer = layui.layer;
+                layer.open({
+                    type: 1,
+                    title: '权限申请',
+                    area: ['400px', '300px'],
+                    content: `
+                        <div style="padding: 20px;">
+                            <form class="layui-form">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">申请原因</label>
+                                    <div class="layui-input-block">
+                                        <textarea name="reason" placeholder="请说明为什么需要此权限" 
+                                                  class="layui-textarea" rows="4"></textarea>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button class="layui-btn" lay-submit lay-filter="permission-form">提交申请</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    `,
+                    success: function(layero, index){
+                        layui.form.on('submit(permission-form)', function(data){
+                            layer.msg('权限申请已提交，管理员将在1-3个工作日内处理');
+                            layer.close(index);
+                            return false;
+                        });
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

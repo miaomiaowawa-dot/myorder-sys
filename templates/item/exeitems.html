@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>服务项目记录</title>
+    <!-- 引入Layui CSS -->
+    <link rel="stylesheet" href="/static/css/layui.css">
+    <style>
+        .date-group {
+            margin: 20px 0;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+        }
+        .date-header {
+            padding: 10px 15px;
+            background-color: #f8f8f8;
+            font-weight: bold;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .date-total {
+            color: #FF5722;
+            font-size: 16px;
+        }
+        .item-table {
+            margin: 0;
+            border: none;
+        }
+        .item-table td {
+            border: none;
+            padding: 10px 15px;
+            border-bottom: 1px dashed #e6e6e6;
+        }
+        .item-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-card-header">
+        <i class="layui-icon layui-icon-time"></i> 服务记录
+        <a href="{{ url_for('exeitem_bp.add_exeitem_page') }}" class="layui-btn layui-btn-normal layui-btn-lg" style="float: center;">
+            <i class="layui-icon">&#xe654;</i> 添加记录
+        </a>
+    </div>
+
+    <div class="layui-container" style="margin-top: 30px;">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-bottom: 20px;">
+            <legend>服务项目记录</legend>
+        </fieldset>
+        
+        <div id="items-container"></div>
+        
+        <!-- 加载中提示 -->
+        <div id="loading" class="layui-hide">
+            <div style="text-align: center; padding: 50px;">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px; color: #16B777;"></i>
+                <p style="margin-top: 10px;">正在加载数据...</p>
+            </div>
+        </div>
+        
+        <!-- 空数据提示 -->
+        <div id="empty-data" class="layui-hide">
+            <div style="text-align: center; padding: 50px; color: #999;">
+                <i class="layui-icon layui-icon-file" style="font-size: 30px;"></i>
+                <p style="margin-top: 10px;">暂无服务项目记录</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Layui JS -->
+    <script src="/static/js/layui.js"></script>
+    <script>
+        layui.use(['jquery', 'layer'], function() {
+            var $ = layui.jquery;
+            var layer = layui.layer;
+            
+            // 显示加载中
+            $('#loading').removeClass('layui-hide');
+            
+            // 请求数据
+            $.ajax({
+                url: '/item/api/items',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    $('#loading').addClass('layui-hide');
+                    
+                    if (res.code === 0 && res.data.length > 0) {
+                        var html = '';
+                        // 遍历日期分组
+                        $.each(res.data, function(index, group) {
+                            html += '<div class="date-group">';
+                            html += '<div class="date-header">';
+                            html += '<span>' + group.date + '</span>';
+                            html += '<span class="date-total">当日总价：¥' + group.total_price + '</span>';
+                            html += '</div>';
+                            
+                            // 渲染当日项目列表
+                            html += '<table class="layui-table item-table">';
+                            html += '<thead><tr><th>服务记录</th><th>项目单价(¥)</th><th>项目备注</th></tr></thead>';
+                            html += '<tbody>';
+                            
+                            $.each(group.items, function(i, item) {
+                                html += '<tr>';
+                                html += '<td>' + (item.item_name || '-') + '</td>';
+                                html += '<td>' + item.item_price + '</td>';
+                                html += '<td>' + (item.item_remark || '无') + '</td>';
+                                html += '</tr>';
+                            });
+                            
+                            html += '</tbody></table>';
+                            html += '</div>';
+                        });
+                        
+                        $('#items-container').html(html);
+                    } else {
+                        $('#empty-data').removeClass('layui-hide');
+                    }
+                },
+                error: function() {
+                    $('#loading').addClass('layui-hide');
+                    layer.msg('数据请求失败，请刷新重试', {icon: 2});
+                }
+            });
+        });
+    </script>
+</body>
+</html>

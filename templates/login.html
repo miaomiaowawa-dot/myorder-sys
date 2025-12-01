@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Myorder</title>
+    <link href="{{ url_for('static', filename='css/layui.css') }}" rel="stylesheet">
+    <style>
+        body { background: #f2f2f2; }
+        .login-container { 
+            margin: 100px auto; 
+            width: 350px; 
+            padding: 30px; 
+            background: white;
+            border-radius: 5px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">Myorder</h2>
+        
+        <!-- 简单写法 -->
+        <form method="post" action="/login">
+            <div class="layui-form-item">
+                <label class="layui-form-label" for="username">用户名</label>
+                <div class="layui-input-block">
+                    <input type="text" 
+                           name="username" 
+                           id="username"
+                           required 
+                           placeholder="请输入用户名"
+                           autocomplete="username"
+                           class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label" for="password">密码</label>
+                <div class="layui-input-block">
+                    <input type="password" 
+                           name="password" 
+                           id="password"
+                           required 
+                           placeholder="请输入密码"
+                           autocomplete="current-password"
+                           class="layui-input">
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <div style="color: red; text-align: center;">{{ error }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="submit" class="layui-btn layui-btn-fluid">登录</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 只需要引入CSS，不需要JS -->
+    <script src="/static/js/layui.js"></script>
+</body>
+</html>
