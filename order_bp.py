@@ -46,7 +46,7 @@ def list_cancel():
 
 @order_bp.route('/api/orders')
 def get_orders_data():
-    """获取订单数据的API接口 - 修复版本"""
+    """获取订单数据的API接口 - 直接在SQL中处理"""
     try:
         # 获取查询参数
         page = request.args.get('page', 1, type=int)
@@ -91,7 +91,7 @@ def get_orders_data():
         total_result = cursor.fetchone()
         total = total_result['total'] if total_result else 0
         
-        # 查询订单数据
+        # 查询订单数据 - 直接在SQL中处理状态显示
         query = f"""
             SELECT 
                 order_id,
@@ -100,7 +100,24 @@ def get_orders_data():
                 order_disprice,
                 order_buytime,
                 order_status,
-                order_remark
+                order_remark,
+                -- 在SQL中直接计算状态显示文本和颜色
+                CASE order_status
+                    WHEN 'pending' THEN '待使用'
+                    WHEN 'started' THEN '已开始'
+                    WHEN 'used' THEN '已完成'
+                    WHEN 'cancel' THEN '已取消'
+                    WHEN 'cancelled' THEN '已取消'
+                    ELSE COALESCE(order_status::text, '未知')
+                END as status_text,
+                CASE order_status
+                    WHEN 'pending' THEN 'orange'
+                    WHEN 'started' THEN 'blue'
+                    WHEN 'used' THEN 'green'
+                    WHEN 'cancel' THEN 'red'
+                    WHEN 'cancelled' THEN 'red'
+                    ELSE 'gray'
+                END as status_color
             FROM order_list 
             {where_clause}
             ORDER BY order_id DESC 
@@ -111,60 +128,40 @@ def get_orders_data():
         query_params = params + [limit, offset]
         
         print(f"执行查询: {query}")
-        print(f"查询参数: {query_params}")
         
         cursor.execute(query, query_params)
         orders = cursor.fetchall()
         
         print(f"查询到 {len(orders)} 条记录")
         
-        # 格式化数据
-        processed_orders = []
-        for i, order in enumerate(orders):
-            try:
-                # 创建新字典，避免修改原始数据
-                processed_order = dict(order)
+        # 只需处理日期和格式，状态已经在SQL中处理了
+        for order in orders:
+            if order['order_buytime']:
+                order['order_buytime'] = order['order_buytime'].strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                order['order_buytime'] = '-'
+            
+            # 确保字段存在
+            order['order_id'] = order['order_id'] or '-'
+            order['order_info'] = order['order_info'] or '-'
+            order['order_remark'] = order['order_remark'] or '-'
+            
+            # 处理价格字段
+            if order['order_price'] is not None:
+                try:
+                    order['order_price'] = str(float(order['order_price']))
+                except:
+                    order['order_price'] = '-'
+            else:
+                order['order_price'] = '-'
                 
-                # 处理日期
-                if processed_order['order_buytime']:
-                    try:
-                        processed_order['order_buytime'] = processed_order['order_buytime'].strftime('%Y-%m-%d %H:%M:%S')
-                    except Exception as e:
-                        print(f"日期格式化错误 (订单 {processed_order.get('order_id')}): {e}")
-                        processed_order['order_buytime'] = str(processed_order['order_buytime'])[:19]
-                else:
-                    processed_order['order_buytime'] = '-'
-                
-                # 处理空值
-                processed_order['order_id'] = processed_order['order_id'] or '-'
-                processed_order['order_info'] = processed_order['order_info'] or '-'
-                processed_order['order_remark'] = processed_order['order_remark'] or '-'
-                
-                # 处理价格字段
-                for price_field in ['order_price', 'order_disprice']:
-                    value = processed_order[price_field]
-                    if value is not None:
-                        try:
-                            processed_order[price_field] = str(float(value))
-                        except (ValueError, TypeError):
-                            processed_order[price_field] = '-'
-                    else:
-                        processed_order[price_field] = '-'
-                
-                # 添加状态显示 - 关键修复
-                status = processed_order.get('order_status')
-                print(f"订单 {i+1}: ID={processed_order['order_id']}, 状态={status}, 类型={type(status)}")
-                
-                processed_order['status_text'] = get_status_text(status)
-                processed_order['status_color'] = get_status_color(status)
-                
-                processed_orders.append(processed_order)
-                
-            except Exception as e:
-                print(f"处理第 {i+1} 条订单时出错: {e}")
-                print(f"问题订单数据: {order}")
-                # 跳过有问题的订单或使用默认值
-                continue
+            if order['order_disprice'] is not None:
+                try:
+                    order['order_disprice'] = str(float(order['order_disprice']))
+                except:
+                    order['order_disprice'] = '-'
+            else:
+                order['order_disprice'] = '-'
         
         cursor.close()
         close_db_connection(conn)
@@ -173,7 +170,7 @@ def get_orders_data():
             'code': 0,
             'msg': '成功',
             'count': total,
-            'data': processed_orders
+            'data': orders
         })
         
     except Exception as e:
@@ -185,7 +182,6 @@ def get_orders_data():
         return jsonify({
             'code': 1,
             'msg': f'获取数据失败: {str(e)}',
-            'error_trace': error_trace,  # 添加错误追踪
             'count': 0,
             'data': []
         })
@@ -593,4 +589,5 @@ def delete_order():
     finally:
         if conn:
             close_db_connection(conn)
+
 
