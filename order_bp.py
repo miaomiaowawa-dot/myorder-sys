@@ -1,23 +1,23 @@
-from flask import Blueprint, render_template, request, jsonify,current_app
-import pymysql
+from flask import Blueprint, render_template, request, jsonify, current_app
 from datetime import datetime
 from flask_login import current_user
+import psycopg2
+from psycopg2.extras import DictCursor
+import os
+import urllib.parse
 
 # 创建订单管理蓝图
-order_bp = Blueprint('orders', __name__, url_prefix='/orders')  
-
-# 数据库配置
-db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '1234',
-    'database': 'plorder',
-    'charset': 'utf8mb4'
-}
+order_bp = Blueprint('orders', __name__, url_prefix='/orders')
 
 def get_db_connection():
-    """获取数据库连接"""
-    return pymysql.connect(**db_config)
+    """获取数据库连接 - 使用主应用的连接池"""
+    from main import DatabasePool
+    return DatabasePool.get_connection()
+
+def close_db_connection(conn):
+    """关闭数据库连接"""
+    from main import DatabasePool
+    DatabasePool.return_connection(conn)
 
 @order_bp.route('/all')
 def list_all():
@@ -39,10 +39,9 @@ def list_used():
     """显示已完结订单页面"""
     return render_template('orders/used_orders.html')
 
-
 @order_bp.route('/cancel')
 def list_cancel():
-    """显示已完结订单页面"""
+    """显示已取消订单页面"""
     return render_template('orders/cancel_orders.html')
 
 @order_bp.route('/api/orders')
@@ -59,16 +58,16 @@ def get_orders_data():
         offset = (page - 1) * limit
         
         conn = get_db_connection()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor(cursor_factory=DictCursor)
         
-        # 构建查询条件 - 使用列表安全构建
+        # 构建查询条件
         where_conditions = []
         params = []
         
         # 搜索条件
         if search:
             where_conditions.append("""
-                (order_id LIKE %s OR 
+                (order_id::text LIKE %s OR 
                  order_info LIKE %s OR 
                  order_remark LIKE %s)
             """)
@@ -86,16 +85,13 @@ def get_orders_data():
         else:
             where_clause = ""
         
-        print(f"WHERE子句: {where_clause}")  # 调试日志
-        print(f"参数: {params}")  # 调试日志
-        
-        # 查询总数 - 使用参数化查询
+        # 查询总数
         count_query = f"SELECT COUNT(*) as total FROM order_list {where_clause}"
         cursor.execute(count_query, params)
         total_result = cursor.fetchone()
         total = total_result['total'] if total_result else 0
         
-        # 查询订单数据 - 使用参数化查询
+        # 查询订单数据
         query = f"""
             SELECT 
                 order_id,
@@ -114,13 +110,8 @@ def get_orders_data():
         # 添加分页参数
         query_params = params + [limit, offset]
         
-        print(f"执行查询: {query}")  # 调试日志
-        print(f"查询参数: {query_params}")  # 调试日志
-        
         cursor.execute(query, query_params)
         orders = cursor.fetchall()
-        
-        print(f"查询到 {len(orders)} 条记录")  # 调试日志
         
         # 格式化数据
         for order in orders:
@@ -133,15 +124,15 @@ def get_orders_data():
             order['order_id'] = order['order_id'] or '-'
             order['order_info'] = order['order_info'] or '-'
             order['order_remark'] = order['order_remark'] or '-'
-            order['order_price'] = str(order['order_price']) if order['order_price'] is not None else '-'
-            order['order_disprice'] = str(order['order_disprice']) if order['order_disprice'] is not None else '-'
+            order['order_price'] = str(float(order['order_price'])) if order['order_price'] is not None else '-'
+            order['order_disprice'] = str(float(order['order_disprice'])) if order['order_disprice'] is not None else '-'
             
             # 添加状态显示
             order['status_text'] = get_status_text(order['order_status'])
             order['status_color'] = get_status_color(order['order_status'])
         
         cursor.close()
-        conn.close()
+        close_db_connection(conn)
         
         return jsonify({
             'code': 0,
@@ -153,7 +144,7 @@ def get_orders_data():
     except Exception as e:
         print(f"API错误: {str(e)}")
         import traceback
-        print(f"详细错误: {traceback.format_exc()}")  # 打印完整堆栈跟踪
+        print(f"详细错误: {traceback.format_exc()}")
         
         return jsonify({
             'code': 1,
@@ -161,6 +152,7 @@ def get_orders_data():
             'count': 0,
             'data': []
         })
+
 def get_status_text(status):
     """获取状态显示文本"""
     status_map = {
@@ -183,10 +175,10 @@ def get_status_color(status):
 
 @order_bp.route('/api/order/<order_id>')
 def get_order_detail(order_id):
-    """获取单个订单详情"""  # 修复：正确的缩进
+    """获取单个订单详情"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor(cursor_factory=DictCursor)
 
         query = """
             SELECT 
@@ -206,7 +198,8 @@ def get_order_detail(order_id):
         if order and order['order_buytime']:
             order['order_buytime'] = order['order_buytime'].strftime('%Y-%m-%d %H:%M:%S')
         
-        conn.close()
+        cursor.close()
+        close_db_connection(conn)
         
         if order:
             return jsonify({
@@ -231,7 +224,7 @@ def dashboard_stats():
     """获取仪表盘统计数据"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor(cursor_factory=DictCursor)
         
         # 1. 总订单数
         cursor.execute("SELECT COUNT(*) as total FROM order_list")
@@ -257,7 +250,8 @@ def dashboard_stats():
             JOIN item i ON ol.order_id = i.record_id 
             WHERE ol.order_status = 'started'
         """)
-        started_consumed = float(cursor.fetchone()['total'])
+        started_consumed_result = cursor.fetchone()
+        started_consumed = float(started_consumed_result['total']) if started_consumed_result['total'] else 0.0
         
         consumed_amount = used_amount + started_consumed
         
@@ -298,7 +292,7 @@ def dashboard_stats():
             })
         
         cursor.close()
-        conn.close()
+        close_db_connection(conn)
         
         return jsonify({
             'code': 0,
@@ -323,19 +317,19 @@ def service_trend():
     """获取服务趋势数据（一年12个月的服务数量）"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor(cursor_factory=DictCursor)
         
         # 获取当前年份
         current_year = datetime.now().year
         
-        # 查询每个月服务数量
+        # 查询每个月服务数量 - PostgreSQL 语法
         query = """
             SELECT 
-                MONTH(exetime) as month,
+                EXTRACT(MONTH FROM exetime) as month,
                 COUNT(*) as count
             FROM item 
-            WHERE YEAR(exetime) = %s
-            GROUP BY MONTH(exetime)
+            WHERE EXTRACT(YEAR FROM exetime) = %s
+            GROUP BY EXTRACT(MONTH FROM exetime)
             ORDER BY month
         """
         cursor.execute(query, (current_year,))
@@ -347,12 +341,12 @@ def service_trend():
         counts = [0] * 12
         
         for data in monthly_data:
-            month_index = data['month'] - 1  # 月份从1开始，数组从0开始
+            month_index = int(data['month']) - 1  # 月份从1开始，数组从0开始
             if 0 <= month_index < 12:
                 counts[month_index] = data['count']
         
         cursor.close()
-        conn.close()
+        close_db_connection(conn)
         
         return jsonify({
             'code': 0,
@@ -369,19 +363,19 @@ def service_trend():
             'msg': f'获取服务趋势失败: {str(e)}'
         })
 
-# 获取所有服务的API
 @order_bp.route('/api/services')
 def get_services():
     """获取所有服务项目"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor(cursor_factory=DictCursor)
         
-        cursor.execute("SELECT service_id, `desc`, package, type, part FROM service ORDER BY `desc`")
+        # PostgreSQL 中 desc 是关键字，需要引号
+        cursor.execute('SELECT service_id, "desc", package, type, part FROM service ORDER BY "desc"')
         services = cursor.fetchall()
         
         cursor.close()
-        conn.close()
+        close_db_connection(conn)
         
         return jsonify({
             'code': 0,
@@ -395,10 +389,10 @@ def get_services():
             'msg': f'获取服务列表失败: {str(e)}'
         })
 
-# 添加订单的API
 @order_bp.route('/api/add', methods=['POST'])
 def add_order():
     """添加新订单"""
+    conn = None
     try:
         data = request.get_json()
         
@@ -411,10 +405,11 @@ def add_order():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 插入订单基本信息
+        # 插入订单基本信息 - PostgreSQL 语法
         order_query = """
             INSERT INTO order_list (order_info, order_price, order_disprice, order_status, order_remark, order_buytime)
             VALUES (%s, %s, %s, %s, %s, NOW())
+            RETURNING order_id
         """
         cursor.execute(order_query, (
             data['order_info'],
@@ -424,7 +419,7 @@ def add_order():
             data.get('order_remark', '')
         ))
         
-        order_id = cursor.lastrowid
+        order_id = cursor.fetchone()[0]
         
         # 插入关联的服务项目
         if data.get('services'):
@@ -441,7 +436,6 @@ def add_order():
         
         conn.commit()
         cursor.close()
-        conn.close()
         
         return jsonify({
             'code': 0,
@@ -450,16 +444,101 @@ def add_order():
         })
         
     except Exception as e:
-        if 'conn' in locals():
+        if conn:
             conn.rollback()
         current_app.logger.error(f"添加订单失败: {str(e)}")
         return jsonify({
             'code': 1,
             'msg': f'添加订单失败: {str(e)}'
         })
+    finally:
+        if conn:
+            close_db_connection(conn)
 
-# 添加订单页面路由
 @order_bp.route('/add')
 def add_order_page():
     """添加订单页面"""
     return render_template('orders/add_order.html')
+
+# 新增订单操作API
+@order_bp.route('/api/update-status', methods=['POST'])
+def update_order_status():
+    """更新订单状态"""
+    conn = None
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        new_status = data.get('status')
+        
+        if not order_id or not new_status:
+            return jsonify({'code': 1, 'msg': '缺少必要参数'})
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 更新订单状态
+        cursor.execute("""
+            UPDATE order_list 
+            SET order_status = %s 
+            WHERE order_id = %s
+        """, (new_status, order_id))
+        
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({
+            'code': 0,
+            'msg': '状态更新成功'
+        })
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        current_app.logger.error(f"更新订单状态失败: {str(e)}")
+        return jsonify({
+            'code': 1,
+            'msg': f'更新失败: {str(e)}'
+        })
+    finally:
+        if conn:
+            close_db_connection(conn)
+
+@order_bp.route('/api/delete', methods=['POST'])
+def delete_order():
+    """删除订单"""
+    conn = None
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        
+        if not order_id:
+            return jsonify({'code': 1, 'msg': '缺少订单ID'})
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 先删除关联的项目
+        cursor.execute("DELETE FROM item WHERE record_id = %s", (order_id,))
+        
+        # 删除订单
+        cursor.execute("DELETE FROM order_list WHERE order_id = %s", (order_id,))
+        
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({
+            'code': 0,
+            'msg': '订单删除成功'
+        })
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        current_app.logger.error(f"删除订单失败: {str(e)}")
+        return jsonify({
+            'code': 1,
+            'msg': f'删除失败: {str(e)}'
+        })
+    finally:
+        if conn:
+            close_db_connection(conn)
