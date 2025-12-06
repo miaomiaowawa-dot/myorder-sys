@@ -9,6 +9,8 @@ import sys
 from datetime import datetime
 from order_bp import order_bp
 from exeitem_bp import exeitem_bp
+import ssl
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'dev-secret-key-123'
@@ -36,12 +38,6 @@ def get_db_config():
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         
-        # 添加search_path参数确保找到public模式下的表
-        if '?' in database_url:
-            database_url += '&options=-c%20search_path%3Dpublic'
-        else:
-            database_url += '?options=-c%20search_path%3Dpublic'
-        
         return database_url
     else:
         # 备用：使用单独的环境变量构建配置
@@ -50,22 +46,110 @@ def get_db_config():
             'user': os.environ.get('DB_USER', 'postgres'),
             'password': os.environ.get('DB_PASSWORD', ''),
             'database': os.environ.get('DB_NAME', 'plorder'),
-            'port': os.environ.get('DB_PORT', '5432')
+            'port': os.environ.get('DB_PORT', '5432'),
+            'sslmode': 'require'  # 对于云数据库必须
         }
 
 # 创建数据库连接池（提高性能，避免频繁连接）
-try:
-    db_pool = psycopg2.pool.SimpleConnectionPool(
-        1,  # 最小连接数
-        10,  # 最大连接数
-        **get_db_config() if isinstance(get_db_config(), dict) else get_db_config()
-    )
-except Exception as e:
-    print(f"连接池创建失败: {e}")
-    db_pool = None
+db_pool = None
+
+def init_db_pool():
+    """初始化数据库连接池"""
+    global db_pool
+    try:
+        config = get_db_config()
+        
+        if isinstance(config, str):  # DATABASE_URL 格式
+            print(f"使用DATABASE_URL连接: {config[:50]}...")  
+            
+            # 解析DATABASE_URL
+            parsed_url = urllib.parse.urlparse(config)
+            
+            # 提取连接参数
+            db_params = {
+                'host': parsed_url.hostname,
+                'database': parsed_url.path[1:],  
+                'user': parsed_url.username,
+                'password': parsed_url.password,
+                'port': parsed_url.port or 5432,
+            }
+            
+            # 对于云数据库，强制SSL
+            if 'render.com' in db_params['host']:
+                db_params['sslmode'] = 'require'
+                
+                # 创建SSL上下文，不验证证书（Render有时证书验证会失败）
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                db_params['sslrootcert'] = None
+                
+                # 对于psycopg2，使用不同的SSL处理方式
+                # 使用连接字符串而不是参数
+                conn_string = f"host={db_params['host']} dbname={db_params['database']} user={db_params['user']} password={db_params['password']} port={db_params['port']} sslmode=require"
+                db_pool = psycopg2.pool.SimpleConnectionPool(
+                    1,  # 最小连接数
+                    10,  # 最大连接数
+                    dsn=conn_string  # 使用连接字符串
+                )
+            else:
+                # 本地数据库
+                db_pool = psycopg2.pool.SimpleConnectionPool(
+                    1,  # 最小连接数
+                    10,  # 最大连接数
+                    **db_params
+                )
+                
+        else:  # 字典格式配置
+            print("使用字典配置连接数据库...")
+            # 对于云数据库，强制SSL
+            if 'render.com' in config.get('host', ''):
+                config['sslmode'] = 'require'
+                
+            db_pool = psycopg2.pool.SimpleConnectionPool(
+                1,  # 最小连接数
+                10,  # 最大连接数
+                **config
+            )
+        
+        print("数据库连接池创建成功")
+        
+    except Exception as e:
+        print(f"连接池创建失败: {e}")
+        db_pool = None
+        # 尝试直接连接测试
+        test_direct_connection()
+
+def test_direct_connection():
+    """测试直接连接"""
+    try:
+        config = get_db_config()
+        if isinstance(config, str):
+            print("测试直接连接...")
+            conn = psycopg2.connect(config, sslmode='require')
+            cursor = conn.cursor()
+            cursor.execute('SELECT 1')
+            result = cursor.fetchone()
+            print(f"直接连接测试成功: {result}")
+            cursor.close()
+            conn.close()
+        else:
+            config['sslmode'] = 'require'
+            conn = psycopg2.connect(**config)
+            cursor = conn.cursor()
+            cursor.execute('SELECT 1')
+            result = cursor.fetchone()
+            print(f"直接连接测试成功: {result}")
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print(f"直接连接测试失败: {e}")
+
+# 初始化连接池
+init_db_pool()
 
 def get_db_connection():
-    """获取数据库连接（使用连接池）"""
+    """获取数据库连接（使用连接池或直接连接）"""
     try:
         if db_pool:
             conn = db_pool.getconn()
@@ -76,15 +160,28 @@ def get_db_connection():
         else:
             # 回退到普通连接
             config = get_db_config()
-            if isinstance(config, dict):
-                conn = psycopg2.connect(**config)
+            if isinstance(config, str):
+                # 对于DATABASE_URL，添加SSL模式
+                if '?' in config:
+                    conn_string = config + '&sslmode=require'
+                else:
+                    conn_string = config + '?sslmode=require'
+                conn = psycopg2.connect(conn_string)
             else:
-                conn = psycopg2.connect(config)
+                config['sslmode'] = 'require'
+                conn = psycopg2.connect(**config)
+            
             with conn.cursor() as cursor:
                 cursor.execute('SET search_path TO public')
             return conn
+            
     except Exception as e:
         print(f"数据库连接失败: {e}")
+        # 尝试重新初始化连接池
+        if not db_pool:
+            init_db_pool()
+            if db_pool:
+                return get_db_connection()
         raise
 
 def close_db_connection(conn):
@@ -92,9 +189,14 @@ def close_db_connection(conn):
     try:
         if db_pool and conn:
             db_pool.putconn(conn)
+        elif conn:
+            conn.close()
     except Exception as e:
         print(f"释放连接失败: {e}")
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass
 
 # ==================== 用户模型 ====================
 class User(UserMixin):
@@ -161,7 +263,7 @@ def login():
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=DictCursor)
             
-   
+        
             cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", 
                           (username, password))
             user = cursor.fetchone()
