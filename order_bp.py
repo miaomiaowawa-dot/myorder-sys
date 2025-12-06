@@ -46,7 +46,7 @@ def list_cancel():
 
 @order_bp.route('/api/orders')
 def get_orders_data():
-    """获取订单数据的API接口"""
+    """获取订单数据的API接口 - 修复版本"""
     try:
         # 获取查询参数
         page = request.args.get('page', 1, type=int)
@@ -110,26 +110,61 @@ def get_orders_data():
         # 添加分页参数
         query_params = params + [limit, offset]
         
+        print(f"执行查询: {query}")
+        print(f"查询参数: {query_params}")
+        
         cursor.execute(query, query_params)
         orders = cursor.fetchall()
         
+        print(f"查询到 {len(orders)} 条记录")
+        
         # 格式化数据
-        for order in orders:
-            if order['order_buytime']:
-                order['order_buytime'] = order['order_buytime'].strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                order['order_buytime'] = '-'
+        processed_orders = []
+        for i, order in enumerate(orders):
+            try:
+                # 创建新字典，避免修改原始数据
+                processed_order = dict(order)
                 
-            # 处理空值
-            order['order_id'] = order['order_id'] or '-'
-            order['order_info'] = order['order_info'] or '-'
-            order['order_remark'] = order['order_remark'] or '-'
-            order['order_price'] = str(float(order['order_price'])) if order['order_price'] is not None else '-'
-            order['order_disprice'] = str(float(order['order_disprice'])) if order['order_disprice'] is not None else '-'
-            
-            # 添加状态显示
-            order['status_text'] = get_status_text(order['order_status'])
-            order['status_color'] = get_status_color(order['order_status'])
+                # 处理日期
+                if processed_order['order_buytime']:
+                    try:
+                        processed_order['order_buytime'] = processed_order['order_buytime'].strftime('%Y-%m-%d %H:%M:%S')
+                    except Exception as e:
+                        print(f"日期格式化错误 (订单 {processed_order.get('order_id')}): {e}")
+                        processed_order['order_buytime'] = str(processed_order['order_buytime'])[:19]
+                else:
+                    processed_order['order_buytime'] = '-'
+                
+                # 处理空值
+                processed_order['order_id'] = processed_order['order_id'] or '-'
+                processed_order['order_info'] = processed_order['order_info'] or '-'
+                processed_order['order_remark'] = processed_order['order_remark'] or '-'
+                
+                # 处理价格字段
+                for price_field in ['order_price', 'order_disprice']:
+                    value = processed_order[price_field]
+                    if value is not None:
+                        try:
+                            processed_order[price_field] = str(float(value))
+                        except (ValueError, TypeError):
+                            processed_order[price_field] = '-'
+                    else:
+                        processed_order[price_field] = '-'
+                
+                # 添加状态显示 - 关键修复
+                status = processed_order.get('order_status')
+                print(f"订单 {i+1}: ID={processed_order['order_id']}, 状态={status}, 类型={type(status)}")
+                
+                processed_order['status_text'] = get_status_text(status)
+                processed_order['status_color'] = get_status_color(status)
+                
+                processed_orders.append(processed_order)
+                
+            except Exception as e:
+                print(f"处理第 {i+1} 条订单时出错: {e}")
+                print(f"问题订单数据: {order}")
+                # 跳过有问题的订单或使用默认值
+                continue
         
         cursor.close()
         close_db_connection(conn)
@@ -138,40 +173,56 @@ def get_orders_data():
             'code': 0,
             'msg': '成功',
             'count': total,
-            'data': orders
+            'data': processed_orders
         })
         
     except Exception as e:
         print(f"API错误: {str(e)}")
         import traceback
-        print(f"详细错误: {traceback.format_exc()}")
+        error_trace = traceback.format_exc()
+        print(f"详细错误: {error_trace}")
         
         return jsonify({
             'code': 1,
             'msg': f'获取数据失败: {str(e)}',
+            'error_trace': error_trace,  # 添加错误追踪
             'count': 0,
             'data': []
         })
 
 def get_status_text(status):
-    """获取状态显示文本"""
+    """获取状态显示文本 -"""
+    if status is None:
+        return '未知'
+    
+    status_str = str(status).strip().lower()
+    
     status_map = {
         'pending': '待使用',
         'started': '已开始', 
         'used': '已完成',
-        'cancel': '已取消'
+        'cancel': '已取消',
+        'cancelled': '已取消',  # 兼容两种拼写
     }
-    return status_map.get(status, status)
+    
+    return status_map.get(status_str, status_str)
 
 def get_status_color(status):
-    """获取状态颜色"""
+    """获取状态颜色 """
+    if status is None:
+        return 'gray'
+    
+    status_str = str(status).strip().lower()
+    
     color_map = {
         'pending': 'orange',
         'started': 'blue',
         'used': 'green',
-        'cancel': 'red'
+        'cancel': 'red',
+        'cancelled': 'red',  # 兼容两种拼写
     }
-    return color_map.get(status, 'gray')
+    
+    return color_map.get(status_str, 'gray')
 
 @order_bp.route('/api/order/<order_id>')
 def get_order_detail(order_id):
@@ -542,3 +593,4 @@ def delete_order():
     finally:
         if conn:
             close_db_connection(conn)
+
